@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>동물상 테스트</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-pink-50 min-h-screen flex flex-col items-center justify-center p-4 relative overflow-x-hidden">
+
+  <div class="bg-white shadow-xl rounded-3xl p-6 w-full max-w-xl z-10">
+    <h1 class="text-3xl font-extrabold text-center text-pink-600 mb-6">🐾 동물상 테스트</h1>
+
+    <div class="flex justify-center mb-4">
+      <button id="start-button" onclick="init()" class="bg-yellow-400 hover:bg-yellow-500 text-white font-bold py-3 px-8 rounded-full shadow-lg text-lg transition duration-300">
+        🎬 카메라 시작하기
+      </button>
+    </div>
+
+    <div class="flex justify-center mb-4">
+      <div id="webcam-container" class="w-[250px] sm:w-[300px] h-[250px] sm:h-[300px] border-4 border-yellow-300 rounded-2xl overflow-hidden shadow-md flex items-center justify-center bg-white"></div>
+    </div>
+
+    <div id="label-container" class="space-y-4 text-sm text-center mb-6"></div>
+    <div id="recommendation-container" class="text-center text-base font-semibold text-purple-700"></div>
+  </div>
+
+  <!-- 카운트다운 숫자 애니메이션 -->
+  <div id="countdown" class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 
+              text-8xl font-black text-purple-600 opacity-0 transition duration-500 z-50"></div>
+
+  <!-- AddThis 공유 스크립트 -->
+  <script type="text/javascript" src="//s7.addthis.com/js/300/addthis_widget.js#pubid=ra-5f6d123456789abc"></script>
+
+  <!-- TensorFlow + Teachable Machine -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+
+  <script>
+    const URL = "./my_model/";
+    let model, webcam, labelContainer, maxPredictions;
+    let isInitialized = false;
+    let animationId;
+
+    async function init() {
+      if (isInitialized) return;
+      isInitialized = true;
+
+      document.getElementById("start-button").disabled = true;
+      document.getElementById("start-button").classList.add("opacity-50", "cursor-not-allowed");
+
+      const modelURL = URL + "model.json";
+      const metadataURL = URL + "metadata.json";
+
+      model = await tmImage.load(modelURL, metadataURL);
+      maxPredictions = model.getTotalClasses();
+
+      webcam = new tmImage.Webcam(300, 300, true);
+      await webcam.setup();
+      await webcam.play();
+      document.getElementById("webcam-container").appendChild(webcam.canvas);
+      labelContainer = document.getElementById("label-container");
+
+      loop();
+      startCountdown();
+    }
+
+    async function loop() {
+      webcam.update();
+      await predict();
+      animationId = window.requestAnimationFrame(loop);
+    }
+
+    async function predict() {
+      const prediction = await model.predict(webcam.canvas);
+      labelContainer.innerHTML = "";
+      for (let i = 0; i < maxPredictions; i++) {
+        const prob = (prediction[i].probability * 100).toFixed(1);
+        const label = prediction[i].className;
+
+        const container = document.createElement("div");
+        container.className = "text-left";
+
+        const labelText = document.createElement("div");
+        labelText.className = "mb-1 text-sm font-medium text-gray-700";
+        labelText.innerText = `${getEmoji(label)} ${label} (${prob}%)`;
+
+        const barBg = document.createElement("div");
+        barBg.className = "w-full bg-gray-200 rounded-full h-4";
+
+        const bar = document.createElement("div");
+        bar.className = "h-4 rounded-full transition-all duration-500";
+        bar.style.width = `${prob}%`;
+        bar.style.backgroundColor = getBarColor(i);
+
+        barBg.appendChild(bar);
+        container.appendChild(labelText);
+        container.appendChild(barBg);
+        labelContainer.appendChild(container);
+      }
+    }
+
+    function startCountdown() {
+      const countdown = document.getElementById("countdown");
+      let count = 5;
+
+      countdown.textContent = count;
+      countdown.classList.remove("opacity-0");
+      countdown.classList.add("opacity-100");
+
+      const interval = setInterval(() => {
+        count--;
+        if (count > 0) {
+          countdown.textContent = count;
+        } else {
+          clearInterval(interval);
+          countdown.classList.add("opacity-0");
+          stopAndShowFinalResult();
+        }
+      }, 1000);
+    }
+
+    async function stopAndShowFinalResult() {
+      cancelAnimationFrame(animationId);
+      webcam.stop();
+      const prediction = await model.predict(webcam.canvas);
+
+      const sorted = prediction
+        .map(p => ({ label: p.className, prob: parseFloat((p.probability * 100).toFixed(1)) }))
+        .sort((a, b) => b.prob - a.prob)
+        .slice(0, 3);
+
+      const resultText = sorted.map(p => `${getEmoji(p.label)} ${p.label} ${p.prob}%`).join(" + ");
+      const mixedDesc = sorted.map(p => getDescription(p.label)).join("\n");
+
+      document.getElementById("recommendation-container").innerHTML = `
+        <div class="bg-purple-100 rounded-xl p-4 mt-4 shadow text-center">
+          <div class="text-xl font-bold mb-2">${resultText}</div>
+          <div class="text-gray-800 whitespace-pre-line text-sm mb-3">${mixedDesc}</div>
+          <div class="addthis_inline_share_toolbox"></div>
+        </div>
+      `;
+
+      if (window.addthis) {
+        window.addthis.toolbox('.addthis_inline_share_toolbox');
+      }
+    }
+
+    function getEmoji(label) {
+      if (label.includes("강아지")) return "🐶";
+      if (label.includes("고양이")) return "🐱";
+      if (label.includes("토끼")) return "🐰";
+      if (label.includes("여우")) return "🦊";
+      if (label.includes("곰")) return "🐻";
+      if (label.includes("사슴")) return "🦌";
+      if (label.includes("호랑이")) return "🐯";
+      if (label.includes("말")) return "🐴";
+      return "🐾";
+    }
+
+    function getBarColor(index) {
+      const colors = ["#f87171", "#60a5fa", "#fbbf24", "#34d399", "#a78bfa", "#f472b6", "#10b981"];
+      return colors[index % colors.length];
+    }
+
+    function getDescription(label) {
+      const map = {
+        "강아지": "다정하고 활발하며 모두와 잘 어울리는 성격이에요.",
+        "고양이": "도도하고 독립적인 성격이지만 섬세한 매력을 가지고 있어요.",
+        "토끼": "수줍고 귀엽지만 따뜻한 마음을 가진 성격이에요.",
+        "여우": "영리하고 재치 있으며 센스가 넘치는 성격이에요.",
+        "곰": "온화하고 믿음직하며 듬직한 성격이에요.",
+        "사슴": "배려심 깊고 조용하며 감수성이 풍부한 성격이에요.",
+        "호랑이": "카리스마 있고 자신감 넘치는 리더형 성격이에요.",
+        "말": "자유롭고 에너지 넘치며 호기심이 많은 성격이에요."
+      };
+      return map[label] || "특별한 매력을 가진 당신만의 성격이에요.";
+    }
+  </script>
+</body>
+</html>
