@@ -145,14 +145,15 @@
       container.innerHTML = `
         <div class="bg-purple-100 rounded-xl p-4 mt-4 shadow text-center">
           <div class="text-xl font-bold mb-2">${resultText}</div>
-          <div class="text-gray-800 whitespace-pre-line text-sm">${mixedDesc}</div>
+          <div class="text-gray-800 whitespace-pre-line text-sm mb-4">${mixedDesc}</div>
+          <button onclick="location.reload()" class="mt-2 bg-yellow-400 hover:bg-yellow-500 text-white font-semibold py-2 px-6 rounded-full shadow transition duration-300">
+            🔁 다시 하기
+          </button>
         </div>
       `;
 
-      // 결과 설명 음성으로 읽어주기
       speakResult(`${sorted[0].label}상과 ${sorted[1].label}상이 섞인 성격이에요. ${mixedDesc.replace(/\n/g, ' ')}`);
 
-      // 결과지 부드럽게 스크롤
       setTimeout(() => {
         container.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }, 500);
