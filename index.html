@@ -27,7 +27,7 @@
     </div>
 
     <div id="label-container" class="space-y-4 text-sm text-center mb-6"></div>
-    <div id="recommendation-container" class="text-center text-base font-semibold text-purple-700"></div>
+    <div id="recommendation-container" class="text-center text-base font-semibold text-purple-700 mt-10"></div>
   </div>
 
   <!-- 카운트다운 숫자 애니메이션 -->
@@ -50,7 +50,6 @@
 
       document.getElementById("start-button").disabled = true;
       document.getElementById("start-button").classList.add("opacity-50", "cursor-not-allowed");
-
       document.getElementById("loading-spinner").classList.remove("hidden");
 
       const modelURL = URL + "model.json";
@@ -115,17 +114,16 @@
       countdown.classList.add("opacity-100");
 
       const interval = setInterval(() => {
+        speakNumber(count);
+        countdown.textContent = count;
         count--;
-        if (count > 0) {
-          countdown.textContent = count;
-        } else {
-          clearInterval(interval);
 
+        if (count < 0) {
+          clearInterval(interval);
           setTimeout(() => {
             countdown.classList.add("opacity-0");
-            countdown.textContent = "";  // ✅ 숫자 제거!
+            countdown.textContent = "";
           }, 800);
-
           stopAndShowFinalResult();
         }
       }, 1000);
@@ -158,8 +156,17 @@
       speakResult(`${sorted[0].label}상과 ${sorted[1].label}상이 섞인 성격이에요. ${mixedDesc.replace(/\n/g, ' ')}`);
 
       setTimeout(() => {
-        container.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        container.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }, 500);
+    }
+
+    function speakNumber(num) {
+      const msg = new SpeechSynthesisUtterance(`${num}`);
+      msg.lang = 'ko-KR';
+      msg.pitch = 1;
+      msg.rate = 1.1;
+      msg.volume = 1;
+      speechSynthesis.speak(msg);
     }
 
     function speakResult(text) {
