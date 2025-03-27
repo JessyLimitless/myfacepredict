@@ -114,11 +114,10 @@
       countdown.classList.add("opacity-100");
 
       const interval = setInterval(() => {
-        speakNumber(count);
-        countdown.textContent = count;
         count--;
-
-        if (count < 0) {
+        if (count >= 0) {
+          countdown.textContent = count;
+        } else {
           clearInterval(interval);
           setTimeout(() => {
             countdown.classList.add("opacity-0");
@@ -158,15 +157,6 @@
       setTimeout(() => {
         container.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }, 500);
-    }
-
-    function speakNumber(num) {
-      const msg = new SpeechSynthesisUtterance(`${num}`);
-      msg.lang = 'ko-KR';
-      msg.pitch = 1;
-      msg.rate = 1.1;
-      msg.volume = 1;
-      speechSynthesis.speak(msg);
     }
 
     function speakResult(text) {
