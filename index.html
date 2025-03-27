@@ -120,9 +120,12 @@
           countdown.textContent = count;
         } else {
           clearInterval(interval);
+
           setTimeout(() => {
             countdown.classList.add("opacity-0");
+            countdown.textContent = "";  // ✅ 숫자 제거!
           }, 800);
+
           stopAndShowFinalResult();
         }
       }, 1000);
